@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學校意見搜尋盤</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .highlight { background-color: #fef08a; color: #b45309; padding: 0 2px; border-radius: 2px; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">🛡️</span>
+                <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    學校匿名意見搜尋盤
+                </span>
+            </div>
+            <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                ⚠️ 免責聲明：一切資訊由大家匿名提供，真假自行判斷。
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+            <h2 class="text-base font-bold text-slate-900 mb-2">🔗 設定數據來源 (Google 試算表連結)</h2>
+            <p class="text-xs text-slate-500 mb-4">請在下方貼上Google Sheet網址。</p>
+            
+			<div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="sheetUrlInput" 
+                    value="https://docs.google.com/spreadsheets/d/173qNP2FxCuIqrz2jetTBMpnAvlX0WZ-A/" 
+                    placeholder="請貼上你的 Google 試算表共用網址或發佈網址..." 
+                    class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-inner">
+                <button id="loadSheetBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm whitespace-nowrap">
+                    🔄 載入數據
+                </button>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                    <span class="text-xs font-bold text-slate-600">連線狀態：</span>
+                    <span id="syncStatus" class="text-slate-500 font-medium text-sm">尚未設定 Google Sheet 連結</span>
+                </div>
+                <div class="bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 flex items-center space-x-2 text-xs">
+                    <span class="text-slate-500">已載入紀錄：</span>
+                    <span id="statTotal" class="font-bold text-indigo-600">0</span>
+                </div>
+            </div>
+        </div>
+		
+		<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2.5">
+                <span class="text-amber-500 text-lg">💡</span>
+                <span class="text-amber-800 text-sm font-medium">歡迎報料：<a href="https://forms.gle/D1L7bN1dUi6HE9TA8" style="color: blue; text-decoration: underline;">https://forms.gle/D1L7bN1dUi6HE9TA8</a>
+</span>
+            </div>
+					<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2.5">
+                <span class="text-amber-500 text-lg">💡</span>
+                <span class="text-amber-800 text-sm font-medium">如果見到"會/不會"的回應，可能是在回答"你會/不會推薦子女就讀？"</span>
+            </div>
+        <div id="searchContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 hidden">
+            <div class="relative">
+                <input type="text" id="searchName" placeholder="輸入關鍵字搜尋學校名稱、人物、年份或評論內容細節..." 
+                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm outline-none shadow-inner">
+                <span class="absolute left-4 top-3.5 text-slate-400 text-base">🔍</span>
+            </div>
+        </div>
+
+			
+        <div id="schoolGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full text-center py-12 text-slate-400 bg-white border border-dashed rounded-2xl p-6 shadow-sm">
+                請在上方輸入 Google 試算表連結，並點擊「載入數據」開始。
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let schoolDatabase = [];
+        let currentScriptTag = null; // 用於管理 JSONP 請求
+
+        // 將 "Date(2024,3,7,5,22,35)" 轉換為香港日期格式 "YYYY-MM-DD HH:mm:ss"
+        // 如果是中文字串（如 "2024年版"），則會原樣安全回傳，不影響運作
+        function formatHongKongDate(dateStr) {
+            if (!dateStr) return '';
+            
+            const match = dateStr.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+            if (match) {
+                const year = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10); // Google API 月份為 0-11，此處直接帶入 Date 物件
+                const day = parseInt(match[3], 10);
+                const hour = match[4] ? parseInt(match[4], 10) : 0;
+                const minute = match[5] ? parseInt(match[5], 10) : 0;
+                const second = match[6] ? parseInt(match[6], 10) : 0;
+
+                const dateObj = new Date(year, month, day, hour, minute, second);
+                const pad = (num) => String(num).padStart(2, '0');
+
+                return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+            }
+            return dateStr;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // 嘗試從本地儲存讀取上一次使用者輸入的網址
+            const savedUrl = localStorage.getItem("user_sheet_url");
+            if (savedUrl) {
+                document.getElementById('sheetUrlInput').value = savedUrl;
+                startJsonpRequest(savedUrl);
+            }
+
+            // 監聽載入按鈕
+            document.getElementById('loadSheetBtn').addEventListener('click', () => {
+                const url = document.getElementById('sheetUrlInput').value.trim();
+                if (!url) {
+                    alert('請先輸入有效的 Google 試算表網址！');
+                    return;
+                }
+                startJsonpRequest(url);
+            });
+
+            // 監聽搜尋輸入
+            document.getElementById('searchName').addEventListener('input', filterSchools);
+        });
+
+        // 1. 發起 JSONP 請求
+        function startJsonpRequest(inputUrl) {
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.innerHTML = "⏳ 正在分析網址並動態建立安全通道...";
+            statusEl.className = "text-amber-600 font-medium text-sm";
+
+            let sheetId = "";
+            const matches = inputUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            const pubMatches = inputUrl.match(/\/d\/e\/([a-zA-Z0-9-_]+)/);
+
+            if (pubMatches) {
+                sheetId = "e/" + pubMatches[1];
+            } else if (matches) {
+                sheetId = matches[1];
+            } else {
+                statusEl.innerHTML = "❌ 網址格式錯誤，無法提取試算表 ID。";
+                statusEl.className = "text-red-600 font-medium text-sm";
+                return;
+            }
+
+            if (currentScriptTag) {
+                document.body.removeChild(currentScriptTag);
+            }
+
+            const jsonpUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:googleDocCallback&t=${new Date().getTime()}`;
+
+            currentScriptTag = document.createElement('script');
+            currentScriptTag.src = jsonpUrl;
+            currentScriptTag.onerror = () => {
+                statusEl.innerHTML = "❌ 連線失敗：請確認網址是否正確，且該試算表已開啟共用權限。";
+                statusEl.className = "text-red-600 font-medium text-sm";
+            };
+            document.body.appendChild(currentScriptTag);
+        }
+
+        // 2. 全局回呼函數：安全解析 Google 試算表 JSON 結構，防止欄位為空時跳過資料
+        window.googleDocCallback = function(data) {
+            const statusEl = document.getElementById('syncStatus');
+            const gridEl = document.getElementById('schoolGrid');
+            const searchContainer = document.getElementById('searchContainer');
+
+            try {
+                if (!data || !data.table || !data.table.rows) {
+                    throw new Error("試算表讀取成功，但裡面沒有找到有效的數據列。");
+                }
+
+                const rows = data.table.rows;
+                const freshData = [];
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].c;
+                    if (!cells) continue; 
+
+                    // 採用寬容的安全值提取函數，防止因儲存格為空或陣列縮短而報錯
+                    const getCellValue = (idx) => {
+                        return (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : '';
+                    };
+
+                    const rawTime = getCellValue(0); // A 欄：時間/版本
+                    const time = formatHongKongDate(rawTime);
+                    const name = getCellValue(2);    // C 欄：學校名稱
+                    const details = getCellValue(3); // D 欄：詳細評論
+
+                    // 只要「學校名稱」有填寫，且不是表頭或無效內容，就列入統計
+                    if (name && !name.startsWith("報料LINK") && name !== "學校名稱" && name !== "名稱") {
+                        freshData.push({ name, details, time });
+                    }
+                }
+
+                if (freshData.length > 0) {
+                    schoolDatabase = freshData;
+                    
+                    const currentUrl = document.getElementById('sheetUrlInput').value.trim();
+                    localStorage.setItem("user_sheet_url", currentUrl);
+                    
+                    searchContainer.classList.remove('hidden');
+                    statusEl.innerHTML = "✨ 雲端連線成功！數據已安全載入並實時同步。";
+                    statusEl.className = "text-emerald-600 font-semibold text-sm";
+                    document.getElementById('statTotal').innerText = schoolDatabase.length;
+                    
+                    filterSchools();
+                } else {
+                    throw new Error("未能從表格的 C 欄與 D 欄提取到有效文字內容。");
+                }
+
+            } catch (error) {
+                console.error("解析失敗:", error);
+                statusEl.innerHTML = `❌ 載入失敗：${error.message}`;
+                statusEl.className = "text-red-600 font-medium text-sm";
+                searchContainer.classList.add('hidden');
+                gridEl.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-500 bg-white border rounded-2xl p-6 shadow-sm max-w-lg mx-auto">
+                        <p class="font-bold mb-2">資料解析失敗</p>
+                        <p class="text-xs text-slate-500 text-left leading-relaxed">
+                            請確認你的 Google 試算表格式：<br>
+                            1. 進入 Google Sheets 點擊右上角<strong>「共用」</strong>，改為<strong>「知道連結的所有人都可以檢視」</strong>。<br>
+                            2. 確認表格的第一個分頁：<strong>A欄為時間或年度</strong>、<strong>C欄是學校名稱</strong>、<strong>D欄是詳細評論內容</strong>。
+                        </p>
+                    </div>`;
+            }
+        };
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function highlightText(text, keyword) {
+            if (!keyword) return text;
+            const target = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${target})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function filterSchools() {
+            const searchKey = document.getElementById('searchName').value.trim();
+            const searchKeyLower = searchKey.toLowerCase();
+            const grid = document.getElementById('schoolGrid');
+
+            const filtered = schoolDatabase.filter(school => {
+                return school.name.toLowerCase().includes(searchKeyLower) || 
+                       school.details.toLowerCase().includes(searchKeyLower) ||
+					   school.time.toLowerCase().includes(searchKeyLower) ;
+            });
+
+            const fragment = document.createDocumentFragment();
+
+            if (filtered.length === 0) {
+                const noData = document.createElement('div');
+                noData.className = "col-span-full text-center py-16 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-300 shadow-sm p-6";
+                noData.innerHTML = `⚠️ 找不到與「<span class="font-semibold text-slate-600">${escapeHtml(searchKey)}</span>」相關的結果。`;
+                fragment.appendChild(noData);
+            } else {
+                filtered.forEach(school => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between";
+                    
+                    let nameHtml = escapeHtml(school.name);
+					let timeHtml = escapeHtml(school.time);
+                    let detailsHtml = escapeHtml(school.details).replace(/\n/g, '<br>');
+
+                    if (searchKey) {
+                        nameHtml = highlightText(nameHtml, searchKey);
+						timeHtml = highlightText(timeHtml, searchKey);
+                        detailsHtml = highlightText(detailsHtml, searchKey);
+                    }
+
+                    card.innerHTML = `
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900 mb-3 tracking-tight">${nameHtml}</h3>
+                            <div class="custom-scrollbar text-slate-600 text-sm leading-relaxed mb-4 overflow-y-auto max-h-64 bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
+                                ${detailsHtml || '<span class="text-slate-400 italic">無詳細內容說明</span>'}
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+							${timeHtml}</span>
+                        </div>
+                    `;
+                    fragment.appendChild(card);
+                });
+            }
+
+            grid.innerHTML = '';
+            grid.appendChild(fragment);
+        }
+    </script>
+</body>
+</html>
