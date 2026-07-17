@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant-HK">
 <head>
@@ -28,7 +29,7 @@
             <div class="flex items-center space-x-3">
                 <span class="text-2xl">🛡️</span>
                 <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    學校匿名意見搜尋 Beta 1.3
+                    學校匿名意見搜尋 Beta 1.4
                 </span>
             </div>
             <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
@@ -49,7 +50,7 @@
         
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
             <h2 class="text-base font-bold text-slate-900 mb-2">🔗 設定數據來源 (Google 試算表連結)</h2>
-            <p class="text-xs text-slate-500 mb-4">請在下方貼上Google Sheet網址。e.g. https://docs.google.com/spreadsheets/d/1pHcq1mhBimUywtrhblrJXLZCbh3ddSTo_ouQR1EIrHM</p>
+            <p class="text-xs text-slate-500 mb-4">請在下方貼上Google Sheet網址。</p>
             
 			<div class="flex flex-col sm:flex-row gap-3">
                 <input type="text" id="sheetUrlInput" 
@@ -95,24 +96,8 @@
         let schoolDatabase = [];
         let currentScriptTag = null; // 用於管理 JSONP 請求
 
-        // 將 "Date(2024,3,7,5,22,35)" 轉換為香港日期格式 "YYYY-MM-DD HH:mm:ss"
         function formatHongKongDate(dateStr) {
             if (!dateStr) return '';
-            
-            const match = dateStr.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
-            if (match) {
-                const year = parseInt(match[1], 10);
-                const month = parseInt(match[2], 10); // Google API 月份為 0-11
-                const day = parseInt(match[3], 10);
-                const hour = match[4] ? parseInt(match[4], 10) : 0;
-                const minute = match[5] ? parseInt(match[5], 10) : 0;
-                const second = match[6] ? parseInt(match[6], 10) : 0;
-
-                const dateObj = new Date(year, month, day, hour, minute, second);
-                const pad = (num) => String(num).padStart(2, '0');
-
-                return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
-            }
             return dateStr;
         }
 
