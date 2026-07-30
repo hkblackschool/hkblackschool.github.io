@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-3">
                 <span class="text-2xl">🛡️</span>
                 <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    學校匿名意見搜尋 Beta 1.5
+                    學校匿名意見搜尋 Beta 1.6
                 </span>
             </div>
             <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
@@ -80,21 +80,43 @@
                 <span class="absolute left-4 top-3.5 text-slate-400 text-base">🔍</span>
             </div>
 
-            <!-- 新增：身份篩選按鈕列 -->
-            <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
-                <span class="font-bold text-slate-500 mr-1">身份篩選：</span>
-                <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-blue-600 text-white border-blue-600 shadow-sm" data-identity="ALL">
-                    全部
-                </button>
-                <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="學生">
-                    🎓 學生
-                </button>
-                <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="教師">
-                    👨‍🏫 教師
-                </button>
-                <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="家長">
-                    👨‍👩‍👧 家長
-                </button>
+            <div class="space-y-3 pt-2 border-t border-slate-100 text-xs">
+                <!-- 身份篩選按鈕列 -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-slate-500 w-16">身份篩選：</span>
+                    <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-blue-600 text-white border-blue-600 shadow-sm" data-identity="ALL">
+                        全部
+                    </button>
+                    <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="學生">
+                        🎓 學生
+                    </button>
+                    <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="教師/職員">
+                        👨‍🏫 教師/職員
+                    </button>
+                    <button class="identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-identity="家長">
+                        👨‍👩‍👧 家長
+                    </button>
+                </div>
+
+                <!-- 新增：學校類型篩選按鈕列 -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-slate-500 w-16">學校類型：</span>
+                    <button class="type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-indigo-600 text-white border-indigo-600 shadow-sm" data-type="ALL">
+                        全部
+                    </button>
+                    <button class="type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-type="幼稚園">
+                        🧸 幼稚園
+                    </button>
+                    <button class="type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-type="小學">
+                        🎒 小學
+                    </button>
+                    <button class="type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-type="中學">
+                        🏫 中學
+                    </button>
+                    <button class="type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200" data-type="特殊學校">
+                        🌱 特殊學校
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -108,8 +130,9 @@
 
     <script>
         let schoolDatabase = [];
-        let currentScriptTag = null; // 用於管理 JSONP 請求
-        let selectedIdentityFilter = 'ALL'; // 當前選中的身份篩選
+        let currentScriptTag = null; 
+        let selectedIdentityFilter = 'ALL'; 
+        let selectedTypeFilter = 'ALL'; // 新增：當前選中的學校類型篩選
 
         function formatHongKongDate(dateStr) {
             if (!dateStr) return '';
@@ -140,11 +163,24 @@
                 btn.addEventListener('click', (e) => {
                     selectedIdentityFilter = e.currentTarget.getAttribute('data-identity');
                     
-                    // 更新按鈕樣式
                     document.querySelectorAll('.identity-filter-btn').forEach(b => {
                         b.className = "identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200";
                     });
                     e.currentTarget.className = "identity-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-blue-600 text-white border-blue-600 shadow-sm";
+
+                    filterSchools();
+                });
+            });
+
+            // 新增：監聽學校類型篩選按鈕點擊事件
+            document.querySelectorAll('.type-filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    selectedTypeFilter = e.currentTarget.getAttribute('data-type');
+                    
+                    document.querySelectorAll('.type-filter-btn').forEach(b => {
+                        b.className = "type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200";
+                    });
+                    e.currentTarget.className = "type-filter-btn px-3 py-1.5 rounded-lg border transition-all font-medium bg-indigo-600 text-white border-indigo-600 shadow-sm";
 
                     filterSchools();
                 });
@@ -210,12 +246,13 @@
 
                     const rawTime = getCellValue(0); 
                     const time = formatHongKongDate(rawTime);
-                    const identity = getCellValue(2); // C 欄身份
-                    const name = getCellValue(3);     // D 欄學校名稱
-                    const details = getCellValue(4);  // E 欄評論細節
+                    const schtype = getCellValue(1);   // B 欄學校類型
+                    const identity = getCellValue(2);  // C 欄身份
+                    const name = getCellValue(3);      // D 欄學校名稱
+                    const details = getCellValue(4);   // E 欄評論細節
 
                     if (name && !name.startsWith("報料LINK") && name !== "學校名稱" && name !== "名稱") {
-                        freshData.push({ name, details, time, identity });
+                        freshData.push({ name, schtype, identity, details, time });
                     }
                 }
 
@@ -243,7 +280,7 @@
                         <p class="text-xs text-slate-500 text-left leading-relaxed">
                             請確認你的 Google 試算表格式：<br>
                             1. 進入 Google Sheets 點擊右上角<strong>「共用」</strong>，改為<strong>「知道連結的所有人都可以檢視」</strong>。<br>
-                            2. 確認表格的第一個分頁：<strong>A欄為時間或年度</strong>、<strong>C欄為投稿人身份</strong>、<strong>D欄是學校名稱</strong>、<strong>E欄是詳細評論內容</strong>。
+                            2. 確認表格的第一個分頁：<strong>A欄時間</strong>、<strong>B欄學校類型</strong>、<strong>C欄投稿人身份</strong>、<strong>D欄學校名稱</strong>、<strong>E欄詳細評論內容</strong>。
                         </p>
                     </div>`;
             }
@@ -267,11 +304,12 @@
             const grid = document.getElementById('schoolGrid');
 
             const filtered = schoolDatabase.filter(school => {
-                // 1. 檢查關鍵字匹配
+                // 1. 檢查關鍵字匹配 (包含學校類型)
                 const matchesSearch = school.name.toLowerCase().includes(searchKeyLower) || 
                                       school.details.toLowerCase().includes(searchKeyLower) ||
                                       school.time.toLowerCase().includes(searchKeyLower) ||
-                                      school.identity.toLowerCase().includes(searchKeyLower);
+                                      school.identity.toLowerCase().includes(searchKeyLower) ||
+                                      school.schtype.toLowerCase().includes(searchKeyLower);
 
                 // 2. 檢查身份標籤匹配
                 let matchesIdentity = true;
@@ -279,7 +317,13 @@
                     matchesIdentity = school.identity.includes(selectedIdentityFilter);
                 }
 
-                return matchesSearch && matchesIdentity;
+                // 3. 檢查學校類型標籤匹配
+                let matchesType = true;
+                if (selectedTypeFilter !== 'ALL') {
+                    matchesType = school.schtype.includes(selectedTypeFilter);
+                }
+
+                return matchesSearch && matchesIdentity && matchesType;
             });
 
             const fragment = document.createDocumentFragment();
@@ -297,18 +341,25 @@
                     let nameHtml = escapeHtml(school.name);
                     let timeHtml = escapeHtml(school.time);
                     let identityHtml = escapeHtml(school.identity);
+                    let schtypeHtml = escapeHtml(school.schtype);
                     let detailsHtml = escapeHtml(school.details).replace(/\n/g, '<br>');
 
                     if (searchKey) {
                         nameHtml = highlightText(nameHtml, searchKey);
                         timeHtml = highlightText(timeHtml, searchKey);
                         identityHtml = highlightText(identityHtml, searchKey);
+                        schtypeHtml = highlightText(schtypeHtml, searchKey);
                         detailsHtml = highlightText(detailsHtml, searchKey);
                     }
 
                     const identityBadge = identityHtml ? 
-                        `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             👤 ${identityHtml}
+                        </span>` : '';
+
+                    const schtypeBadge = schtypeHtml ? 
+                        `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                            🏫 ${schtypeHtml}
                         </span>` : '';
 
                     card.innerHTML = `
@@ -318,11 +369,14 @@
                                 ${detailsHtml || '<span class="text-slate-400 italic">無詳細內容說明</span>'}
                             </div>
                         </div>
-                        <div class="pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <div class="pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center flex-wrap gap-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                 ${timeHtml}
                             </span>
-                            ${identityBadge}
+                            <div class="flex items-center gap-1">
+                                ${schtypeBadge}
+                                ${identityBadge}
+                            </div>
                         </div>
                     `;
                     fragment.appendChild(card);
